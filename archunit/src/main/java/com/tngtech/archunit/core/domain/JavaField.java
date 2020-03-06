@@ -54,6 +54,12 @@ public class JavaField extends JavaMember implements HasType {
 
     @Override
     @PublicAPI(usage = ACCESS)
+    public JavaType getType() {
+        return type;
+    }
+
+    @Override
+    @PublicAPI(usage = ACCESS)
     public JavaClass getRawType() {
         return type;
     }

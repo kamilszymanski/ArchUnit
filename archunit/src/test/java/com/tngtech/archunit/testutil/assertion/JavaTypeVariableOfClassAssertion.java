@@ -1,6 +1,7 @@
 package com.tngtech.archunit.testutil.assertion;
 
 import com.tngtech.archunit.core.domain.JavaTypeVariable;
+import com.tngtech.archunit.testutil.assertion.JavaTypeVariableAssertion.ExpectedConcreteType;
 import org.assertj.core.api.AbstractObjectAssert;
 
 import static com.tngtech.archunit.testutil.Assertions.assertThatTypeVariable;
@@ -14,6 +15,11 @@ public class JavaTypeVariableOfClassAssertion extends AbstractObjectAssert<JavaT
     }
 
     public JavaTypeAssertion withBoundsMatching(Class<?>... bounds) {
+        assertThatTypeVariable(actual).hasBoundsMatching(bounds);
+        return backlink;
+    }
+
+    public JavaTypeAssertion withBoundsMatching(ExpectedConcreteType... bounds) {
         assertThatTypeVariable(actual).hasBoundsMatching(bounds);
         return backlink;
     }
