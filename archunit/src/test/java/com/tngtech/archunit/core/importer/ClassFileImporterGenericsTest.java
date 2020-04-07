@@ -3,13 +3,21 @@ package com.tngtech.archunit.core.importer;
 import java.io.Closeable;
 import java.io.File;
 import java.io.Serializable;
+import java.lang.ref.Reference;
+import java.util.List;
 import java.util.Map;
 
 import com.tngtech.archunit.base.Function;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.importer.testexamples.generics.ClassParameterWithSingleTypeParameter;
+import com.tngtech.archunit.core.importer.testexamples.generics.ClassWithMultipleTypeParametersBoundByTypesWithDifferentBounds;
 import com.tngtech.archunit.core.importer.testexamples.generics.ClassWithMultipleTypeParametersWithGenericClassOrInterfaceBoundsAssignedToConcreteTypes;
+import com.tngtech.archunit.core.importer.testexamples.generics.ClassWithSingleTypeParameterBoundByTypeWithUnboundWildcard;
+import com.tngtech.archunit.core.importer.testexamples.generics.ClassWithSingleTypeParameterBoundByTypeWithWildcardWithLowerClassBound;
+import com.tngtech.archunit.core.importer.testexamples.generics.ClassWithSingleTypeParameterBoundByTypeWithWildcardWithLowerInterfaceBound;
+import com.tngtech.archunit.core.importer.testexamples.generics.ClassWithSingleTypeParameterBoundByTypeWithWildcardWithUpperClassBound;
+import com.tngtech.archunit.core.importer.testexamples.generics.ClassWithSingleTypeParameterBoundByTypeWithWildcardWithUpperInterfaceBound;
 import com.tngtech.archunit.core.importer.testexamples.generics.ClassWithSingleTypeParameterWithGenericClassBoundAssignedToConcreteClass;
 import com.tngtech.archunit.core.importer.testexamples.generics.ClassWithSingleTypeParameterWithMultipleSimpleClassAndInterfaceBounds;
 import com.tngtech.archunit.core.importer.testexamples.generics.ClassWithSingleTypeParameterWithSimpleClassBound;
@@ -21,13 +29,21 @@ import com.tngtech.archunit.core.importer.testexamples.generics.ClassWithThreeTy
 import com.tngtech.archunit.core.importer.testexamples.generics.ClassWithTwoTypeParametersWithMultipleGenericClassAndInterfaceBoundsAssignedToConcreteTypes;
 import com.tngtech.archunit.core.importer.testexamples.generics.InterfaceParameterWithSingleTypeParameter;
 import com.tngtech.archunit.testutil.ArchConfigurationRule;
+import com.tngtech.java.junit.dataprovider.DataProvider;
+import com.tngtech.java.junit.dataprovider.DataProviderRunner;
+import com.tngtech.java.junit.dataprovider.UseDataProvider;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 
 import static com.tngtech.archunit.testutil.Assertions.assertThat;
 import static com.tngtech.archunit.testutil.Assertions.assertThatType;
-import static com.tngtech.archunit.testutil.assertion.JavaTypeVariableAssertion.typeVariable;
+import static com.tngtech.archunit.testutil.assertion.JavaTypeVariableAssertion.ExpectedConcreteWildcardType.wildcardType;
+import static com.tngtech.archunit.testutil.assertion.JavaTypeVariableAssertion.parameterizedType;
+import static com.tngtech.java.junit.dataprovider.DataProviders.$;
+import static com.tngtech.java.junit.dataprovider.DataProviders.$$;
 
+@RunWith(DataProviderRunner.class)
 public class ClassFileImporterGenericsTest {
 
     @Rule
@@ -120,7 +136,7 @@ public class ClassFileImporterGenericsTest {
         JavaClass javaClass = classes.get(ClassWithSingleTypeParameterWithGenericClassBoundAssignedToConcreteClass.class);
 
         assertThatType(javaClass).hasOnlyTypeParameter("T")
-                .withBoundsMatching(typeVariable(ClassParameterWithSingleTypeParameter.class).withTypeArguments(String.class));
+                .withBoundsMatching(parameterizedType(ClassParameterWithSingleTypeParameter.class).withTypeArguments(String.class));
     }
 
     @Test
@@ -131,9 +147,9 @@ public class ClassFileImporterGenericsTest {
         JavaClass javaClass = classes.get(ClassWithMultipleTypeParametersWithGenericClassOrInterfaceBoundsAssignedToConcreteTypes.class);
 
         assertThatType(javaClass).hasTypeParameters("A", "B", "C")
-                .hasTypeParameter("A").withBoundsMatching(typeVariable(ClassParameterWithSingleTypeParameter.class).withTypeArguments(File.class))
-                .hasTypeParameter("B").withBoundsMatching(typeVariable(InterfaceParameterWithSingleTypeParameter.class).withTypeArguments(Serializable.class))
-                .hasTypeParameter("C").withBoundsMatching(typeVariable(InterfaceParameterWithSingleTypeParameter.class).withTypeArguments(String.class));
+                .hasTypeParameter("A").withBoundsMatching(parameterizedType(ClassParameterWithSingleTypeParameter.class).withTypeArguments(File.class))
+                .hasTypeParameter("B").withBoundsMatching(parameterizedType(InterfaceParameterWithSingleTypeParameter.class).withTypeArguments(Serializable.class))
+                .hasTypeParameter("C").withBoundsMatching(parameterizedType(InterfaceParameterWithSingleTypeParameter.class).withTypeArguments(String.class));
     }
 
     @Test
@@ -147,12 +163,88 @@ public class ClassFileImporterGenericsTest {
         assertThatType(javaClass).hasTypeParameters("A", "B")
                 .hasTypeParameter("A")
                 .withBoundsMatching(
-                        typeVariable(ClassParameterWithSingleTypeParameter.class).withTypeArguments(String.class),
-                        typeVariable(InterfaceParameterWithSingleTypeParameter.class).withTypeArguments(Serializable.class))
+                        parameterizedType(ClassParameterWithSingleTypeParameter.class).withTypeArguments(String.class),
+                        parameterizedType(InterfaceParameterWithSingleTypeParameter.class).withTypeArguments(Serializable.class))
                 .hasTypeParameter("B")
                 .withBoundsMatching(
-                        typeVariable(Map.class).withTypeArguments(String.class, Serializable.class),
-                        typeVariable(Iterable.class).withTypeArguments(File.class),
-                        typeVariable(Function.class).withTypeArguments(Integer.class, Long.class));
+                        parameterizedType(Map.class).withTypeArguments(String.class, Serializable.class),
+                        parameterizedType(Iterable.class).withTypeArguments(File.class),
+                        parameterizedType(Function.class).withTypeArguments(Integer.class, Long.class));
+    }
+
+    @Test
+    public void imports_single_type_bound_with_unbound_wildcard() {
+        JavaClasses classes = new ClassFileImporter().importClasses(ClassWithSingleTypeParameterBoundByTypeWithUnboundWildcard.class, List.class, String.class);
+
+        JavaClass javaClass = classes.get(ClassWithSingleTypeParameterBoundByTypeWithUnboundWildcard.class);
+
+        assertThatType(javaClass)
+                .hasTypeParameter("T").withBoundsMatching(parameterizedType(List.class).withWildcardTypeParameter());
+    }
+
+    @DataProvider
+    public static Object[][] single_type_bound_with_upper_bound_wildcard() {
+        return $$(
+                $(ClassWithSingleTypeParameterBoundByTypeWithWildcardWithUpperClassBound.class, String.class),
+                $(ClassWithSingleTypeParameterBoundByTypeWithWildcardWithUpperInterfaceBound.class, Serializable.class)
+        );
+    }
+
+    @Test
+    @UseDataProvider("single_type_bound_with_upper_bound_wildcard")
+    public void imports_single_type_bound_with_upper_bound_wildcard(Class<?> classWithWildcard, Class<?> expectedUpperBound) {
+        JavaClasses classes = new ClassFileImporter().importClasses(classWithWildcard, List.class, expectedUpperBound);
+
+        JavaClass javaClass = classes.get(classWithWildcard);
+
+        assertThatType(javaClass)
+                .hasTypeParameter("T").withBoundsMatching(parameterizedType(List.class).withWildcardTypeParameterWithUpperBound(expectedUpperBound));
+    }
+
+    @DataProvider
+    public static Object[][] single_type_bound_with_lower_bound_wildcard() {
+        return $$(
+                $(ClassWithSingleTypeParameterBoundByTypeWithWildcardWithLowerClassBound.class, String.class),
+                $(ClassWithSingleTypeParameterBoundByTypeWithWildcardWithLowerInterfaceBound.class, Serializable.class)
+        );
+    }
+
+    @Test
+    @UseDataProvider("single_type_bound_with_lower_bound_wildcard")
+    public void imports_single_type_bound_with_lower_bound_wildcard(Class<?> classWithWildcard, Class<?> expectedLowerBound) {
+        JavaClasses classes = new ClassFileImporter().importClasses(classWithWildcard, List.class, expectedLowerBound);
+
+        JavaClass javaClass = classes.get(classWithWildcard);
+
+        assertThatType(javaClass)
+                .hasTypeParameter("T").withBoundsMatching(parameterizedType(List.class).withWildcardTypeParameterWithLowerBound(expectedLowerBound));
+    }
+
+    @Test
+    public void imports_multiple_type_bounds_with_multiple_wildcards_with_various_bounds() {
+        JavaClasses classes = new ClassFileImporter().importClasses(ClassWithMultipleTypeParametersBoundByTypesWithDifferentBounds.class,
+                Map.class, Serializable.class, File.class, Reference.class, String.class);
+
+        JavaClass javaClass = classes.get(ClassWithMultipleTypeParametersBoundByTypesWithDifferentBounds.class);
+
+        assertThatType(javaClass).hasTypeParameters("A", "B")
+                .hasTypeParameter("A")
+                .withBoundsMatching(
+                        parameterizedType(Map.class)
+                                .withWildcardTypeParameters(
+                                        wildcardType().withUpperBound(Serializable.class),
+                                        wildcardType().withLowerBound(File.class)
+                                ))
+                .hasTypeParameter("B")
+                .withBoundsMatching(
+                        parameterizedType(Reference.class)
+                                .withWildcardTypeParameters(
+                                        wildcardType().withLowerBound(String.class)
+                                ),
+                        parameterizedType(Map.class)
+                                .withWildcardTypeParameters(
+                                        wildcardType(),
+                                        wildcardType()
+                                ));
     }
 }
