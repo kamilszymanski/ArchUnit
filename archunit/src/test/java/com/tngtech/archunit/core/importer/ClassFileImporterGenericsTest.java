@@ -29,6 +29,7 @@ import com.tngtech.archunit.core.importer.testexamples.generics.ClassWithThreeTy
 import com.tngtech.archunit.core.importer.testexamples.generics.ClassWithTwoTypeParametersWithMultipleGenericClassAndInterfaceBoundsAssignedToConcreteTypes;
 import com.tngtech.archunit.core.importer.testexamples.generics.ClassWithTypeParameterWithInnerClassesWithTypeVariableBound;
 import com.tngtech.archunit.core.importer.testexamples.generics.ClassWithTypeParameterWithTypeVariableBound;
+import com.tngtech.archunit.core.importer.testexamples.generics.ClassWithWildcardWithTypeVariableBounds;
 import com.tngtech.archunit.core.importer.testexamples.generics.InterfaceParameterWithSingleTypeParameter;
 import com.tngtech.archunit.testutil.ArchConfigurationRule;
 import com.tngtech.java.junit.dataprovider.DataProvider;
@@ -305,5 +306,63 @@ public class ClassFileImporterGenericsTest {
                 .withBoundsMatching(typeVariable("T").withoutUpperBounds())
                 .hasTypeParameter("MOST_INNER2")
                 .withBoundsMatching(typeVariable("MORE_INNER2").withoutUpperBounds());
+    }
+
+    @Test
+    public void imports_wild_cards_bound_by_type_variables() {
+        JavaClasses classes = new ClassFileImporter().importClasses(ClassWithWildcardWithTypeVariableBounds.class, List.class, String.class);
+
+        JavaClass javaClass = classes.get(ClassWithWildcardWithTypeVariableBounds.class);
+
+        assertThatType(javaClass).hasTypeParameters("T", "U", "V")
+                .hasTypeParameter("U")
+                .withBoundsMatching(
+                        parameterizedType(List.class).withWildcardTypeParameterWithUpperBound(
+                                typeVariable("T").withUpperBounds(String.class)))
+                .hasTypeParameter("V")
+                .withBoundsMatching(
+                        parameterizedType(List.class).withWildcardTypeParameterWithLowerBound(
+                                typeVariable("T").withUpperBounds(String.class)));
+    }
+
+    @Test
+    public void imports_wild_cards_bound_by_type_variables_of_enclosing_classes() {
+        JavaClasses classes = new ClassFileImporter().importClasses(
+                ClassWithWildcardWithTypeVariableBounds.class,
+                ClassWithWildcardWithTypeVariableBounds.Inner.class,
+                ClassWithWildcardWithTypeVariableBounds.Inner.MoreInner.class,
+                List.class, String.class);
+
+        JavaClass javaClass = classes.get(ClassWithWildcardWithTypeVariableBounds.Inner.MoreInner.class);
+
+        assertThatType(javaClass).hasTypeParameters("MOST_INNER1", "MOST_INNER2")
+                .hasTypeParameter("MOST_INNER1")
+                .withBoundsMatching(
+                        parameterizedType(List.class).withWildcardTypeParameterWithUpperBound(
+                                typeVariable("T").withUpperBounds(String.class)))
+                .hasTypeParameter("MOST_INNER2")
+                .withBoundsMatching(
+                        parameterizedType(List.class).withWildcardTypeParameterWithLowerBound(
+                                typeVariable("V").withUpperBounds(
+                                        parameterizedType(List.class).withWildcardTypeParameterWithLowerBound(
+                                                typeVariable("T").withUpperBounds(String.class)))));
+    }
+
+    @Test
+    public void creates_new_stub_type_variables_for_wildcards_bound_by_type_variables_of_enclosing_classes_that_are_out_of_context() {
+        JavaClasses classes = new ClassFileImporter().importClasses(ClassWithWildcardWithTypeVariableBounds.Inner.MoreInner.class,
+                List.class, String.class);
+
+        JavaClass javaClass = classes.get(ClassWithWildcardWithTypeVariableBounds.Inner.MoreInner.class);
+
+        assertThatType(javaClass).hasTypeParameters("MOST_INNER1", "MOST_INNER2")
+                .hasTypeParameter("MOST_INNER1")
+                .withBoundsMatching(
+                        parameterizedType(List.class).withWildcardTypeParameterWithUpperBound(
+                                typeVariable("T").withoutUpperBounds()))
+                .hasTypeParameter("MOST_INNER2")
+                .withBoundsMatching(
+                        parameterizedType(List.class).withWildcardTypeParameterWithLowerBound(
+                                typeVariable("V").withoutUpperBounds()));
     }
 }
