@@ -15,11 +15,12 @@
  */
 package com.tngtech.archunit.core.importer;
 
-import java.util.HashMap;
 import java.util.Map;
+import java.util.SortedMap;
+import java.util.TreeMap;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Sets;
 import com.tngtech.archunit.base.Optional;
 import com.tngtech.archunit.core.domain.JavaClass;
@@ -35,43 +36,42 @@ class ImportedClasses {
     private static final ImmutableSet<JavaModifier> PRIMITIVE_AND_ARRAY_TYPE_MODIFIERS =
             Sets.immutableEnumSet(PUBLIC, ABSTRACT, FINAL);
 
-    private final ImmutableMap<String, JavaClass> directlyImported;
-    private final Map<String, JavaClass> additionalClasses = new HashMap<>();
+    private final ImmutableSortedMap<String, JavaClass> directlyImported;
+    // We sort the key set by type name to ensure inner classes will always be later than all their outer classes
+    // This is relevant in the completion process, e.g. for generic type parameters, where outer classes need to be processed first
+    private final SortedMap<String, JavaClass> allClasses;
+
     private final ClassResolver resolver;
 
     ImportedClasses(Map<String, JavaClass> directlyImported, ClassResolver resolver) {
-        this.directlyImported = ImmutableMap.copyOf(directlyImported);
+        this.directlyImported = ImmutableSortedMap.copyOf(directlyImported);
+        this.allClasses = new TreeMap<>(this.directlyImported);
         this.resolver = resolver;
     }
 
-    Map<String, JavaClass> getDirectlyImported() {
+    SortedMap<String, JavaClass> getDirectlyImported() {
         return directlyImported;
     }
 
     JavaClass getOrResolve(String typeName) {
         ensurePresent(typeName);
-        return directlyImported.containsKey(typeName) ?
-                directlyImported.get(typeName) :
-                additionalClasses.get(typeName);
+        return allClasses.get(typeName);
     }
 
     void ensurePresent(String typeName) {
         if (!contain(typeName)) {
             Optional<JavaClass> resolved = resolver.tryResolve(typeName);
             JavaClass newClass = resolved.isPresent() ? resolved.get() : simpleClassOf(typeName);
-            additionalClasses.put(typeName, newClass);
+            allClasses.put(typeName, newClass);
         }
     }
 
     private boolean contain(String name) {
-        return directlyImported.containsKey(name) || additionalClasses.containsKey(name);
+        return allClasses.containsKey(name);
     }
 
-    Map<String, JavaClass> getAll() {
-        return ImmutableMap.<String, JavaClass>builder()
-                .putAll(directlyImported)
-                .putAll(additionalClasses)
-                .build();
+    SortedMap<String, JavaClass> getAll() {
+        return ImmutableSortedMap.copyOf(allClasses);
     }
 
     ClassesByTypeName byTypeName() {

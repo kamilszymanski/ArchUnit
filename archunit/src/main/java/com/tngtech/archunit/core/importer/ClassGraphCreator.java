@@ -56,6 +56,7 @@ import com.tngtech.archunit.core.importer.resolvers.ClassResolver;
 
 import static com.google.common.collect.Iterables.concat;
 import static com.tngtech.archunit.core.domain.DomainObjectCreationContext.completeClassHierarchy;
+import static com.tngtech.archunit.core.domain.DomainObjectCreationContext.completeEnclosingClass;
 import static com.tngtech.archunit.core.domain.DomainObjectCreationContext.createJavaClasses;
 import static com.tngtech.archunit.core.importer.DomainBuilders.BuilderWithBuildParameter.BuildFinisher.build;
 import static com.tngtech.archunit.core.importer.DomainBuilders.buildAnnotations;
@@ -99,7 +100,7 @@ class ClassGraphCreator implements ImportContext {
 
     JavaClasses complete() {
         ensureCallTargetsArePresent();
-        ensureClassHierarchies();
+        ensureClassHierarchiesAndEnclosingClasses();
         completeTypeParametersAndMembers();
         completeAnnotations();
         for (RawAccessRecord.ForField fieldAccessRecord : importRecord.getRawFieldAccessRecords()) {
@@ -120,19 +121,20 @@ class ClassGraphCreator implements ImportContext {
         }
     }
 
-    private void ensureClassHierarchies() {
+    private void ensureClassHierarchiesAndEnclosingClasses() {
         ensureClassesOfHierarchyInContext();
         for (JavaClass javaClass : classes.getAll().values()) {
             completeClassHierarchy(javaClass, this);
+            completeEnclosingClass(javaClass, this);
         }
     }
 
     private void ensureClassesOfHierarchyInContext() {
-        for (String superClassName : ImmutableSet.copyOf(importRecord.getSuperClassNamesBySubClass().values())) {
+        for (String superClassName : importRecord.getAllSuperClassNames()) {
             resolveInheritance(superClassName, superClassStrategy);
         }
 
-        for (String superInterfaceName : ImmutableSet.copyOf(importRecord.getInterfaceNamesBySubInterface().values())) {
+        for (String superInterfaceName : importRecord.getAllSuperInterfaceNames()) {
             resolveInheritance(superInterfaceName, interfaceStrategy);
         }
     }
@@ -265,7 +267,7 @@ class ClassGraphCreator implements ImportContext {
     @Override
     public List<JavaTypeVariable> createTypeParameters(JavaClass owner) {
         TypeParametersBuilder typeParametersBuilder = importRecord.getTypeParameterBuildersFor(owner.getName());
-        return typeParametersBuilder.build(classes.byTypeName());
+        return typeParametersBuilder.build(owner, classes.byTypeName());
     }
 
     @Override
