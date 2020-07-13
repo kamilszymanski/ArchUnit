@@ -13,6 +13,7 @@ import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.importer.testexamples.generics.ClassParameterWithSingleTypeParameter;
 import com.tngtech.archunit.core.importer.testexamples.generics.ClassWithComplexTypeParameters;
+import com.tngtech.archunit.core.importer.testexamples.generics.ClassWithComplexTypeParametersWithConcreteArrayBounds;
 import com.tngtech.archunit.core.importer.testexamples.generics.ClassWithMultipleTypeParametersBoundByTypesWithDifferentBounds;
 import com.tngtech.archunit.core.importer.testexamples.generics.ClassWithMultipleTypeParametersWithGenericClassOrInterfaceBoundsAssignedToConcreteTypes;
 import com.tngtech.archunit.core.importer.testexamples.generics.ClassWithSingleTypeParameterBoundByTypeWithUnboundWildcard;
@@ -413,5 +414,31 @@ public class ClassFileImporterGenericsTest {
                                 typeVariable("D")
                         ))
                 .hasTypeParameter("D").withBoundsMatching(Object.class);
+    }
+
+    @Test
+    public void imports_complex_type_with_multiple_nested_parameters_with_concrete_array_bounds() {
+        JavaClasses classes = new ClassFileImporter().importClasses(ClassWithComplexTypeParametersWithConcreteArrayBounds.class,
+                List.class, Serializable.class, Map.class, String.class);
+
+        JavaClass javaClass = classes.get(ClassWithComplexTypeParametersWithConcreteArrayBounds.class);
+
+        assertThatType(javaClass)
+                .hasTypeParameter("A")
+                .withBoundsMatching(
+                        parameterizedType(List.class).withTypeArguments(Serializable[].class))
+                .hasTypeParameter("B")
+                .withBoundsMatching(
+                        parameterizedType(List.class).withWildcardTypeParameterWithUpperBound(Serializable[][].class))
+                .hasTypeParameter("C")
+                .withBoundsMatching(
+                        parameterizedType(Map.class).withTypeArguments(
+                                wildcardType().withLowerBound(String[].class),
+                                parameterizedType(Map.class).withTypeArguments(
+                                        parameterizedType(Map.class).withTypeArguments(
+                                                wildcardType().withLowerBound(String[][][].class),
+                                                wildcardType()),
+                                        parameterizedType(Serializable[][].class)))
+                );
     }
 }
