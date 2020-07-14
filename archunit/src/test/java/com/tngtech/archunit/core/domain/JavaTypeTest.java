@@ -56,6 +56,15 @@ public class JavaTypeTest {
         assertThatType(getTypeArgumentOfFirstBound(typeParameters.get(2)).toErasure()).matches(List[][][].class);
     }
 
+    @Test
+    public void erased_type_parameter_of_generic_array_type_is_array_type() {
+        List<JavaTypeVariable> typeParameters = new ClassFileImporter().importClass(ClassWithBoundTypeParameterWithGenericArrayBounds.class).getTypeParameters();
+
+        assertThatType(getTypeArgumentOfFirstBound(typeParameters.get(3)).toErasure()).matches(Object[].class);
+        assertThatType(getTypeArgumentOfFirstBound(typeParameters.get(4)).toErasure()).matches(String[][].class);
+        assertThatType(getTypeArgumentOfFirstBound(typeParameters.get(5)).toErasure()).matches(List[][][].class);
+    }
+
     private static JavaType getTypeArgumentOfFirstBound(JavaTypeVariable typeParameter) {
         JavaParameterizedType firstBound = (JavaParameterizedType) typeParameter.getBounds().get(0);
         return firstBound.getActualTypeArguments().get(0);
@@ -78,6 +87,10 @@ public class JavaTypeTest {
 
     @SuppressWarnings("unused")
     private static class ClassWithBoundTypeParameterWithSingleGenericArrayBound<T extends List<Object[]>, U extends List<String[][]>, V extends List<List<?>[][][]>> {
+    }
+
+    @SuppressWarnings("unused")
+    private static class ClassWithBoundTypeParameterWithGenericArrayBounds<A, B extends String, C extends List<?>, T extends List<A[]>, U extends List<B[][]>, V extends List<C[][][]>> {
     }
 
     @SuppressWarnings("unused")
