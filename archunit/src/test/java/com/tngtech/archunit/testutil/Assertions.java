@@ -96,8 +96,8 @@ public class Assertions extends org.assertj.core.api.Assertions {
         return new JavaTypeVariableAssertion(typeVariable);
     }
 
-    public static JavaTypesAssertion assertThatTypes(Iterable<? extends JavaType> javaClasses) {
-        return new JavaTypesAssertion(javaClasses);
+    public static JavaTypesAssertion assertThatTypes(Iterable<? extends JavaType> javaTypes) {
+        return new JavaTypesAssertion(javaTypes);
     }
 
     public static JavaPackagesAssertion assertThatPackages(Iterable<JavaPackage> javaPackages) {
@@ -132,8 +132,8 @@ public class Assertions extends org.assertj.core.api.Assertions {
         return new JavaFieldsAssertion(fields);
     }
 
-    public static JavaTypesAssertion assertThat(JavaType[] javaClasses) {
-        return new JavaTypesAssertion(javaClasses);
+    public static JavaTypesAssertion assertThat(JavaType[] javaTypes) {
+        return new JavaTypesAssertion(javaTypes);
     }
 
     public static JavaClassListAssertion assertThat(JavaClassList javaClasses) {
